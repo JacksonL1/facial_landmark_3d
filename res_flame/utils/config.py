@@ -23,15 +23,8 @@ cfg.checkpoint_fp = os.path.join(cfg.deca_dir, 'model', 'vdc_mobilenet1.tar')
 # ---------------------------------------------------------------------------- #
 cfg.model = CN()
 cfg.model.topology_path = os.path.join(cfg.deca_dir, 'model', 'head_template.obj')
-# texture data original from http://files.is.tue.mpg.de/tbolkart/FLAME/FLAME_texture_data.zip
-cfg.model.dense_template_path = os.path.join(cfg.deca_dir, 'model', 'texture_data_256.npy')
-cfg.model.fixed_displacement_path = os.path.join(cfg.deca_dir, 'model', 'fixed_displacement_256.npy')
 cfg.model.flame_model_path = os.path.join(cfg.deca_dir, 'model', 'generic_model.pkl')
 cfg.model.flame_lmk_embedding_path = os.path.join(cfg.deca_dir, 'model', 'landmark_embedding.npy')
-cfg.model.face_mask_path = os.path.join(cfg.deca_dir, 'model', 'uv_face_mask.png')
-cfg.model.face_eye_mask_path = os.path.join(cfg.deca_dir, 'model', 'uv_face_eye_mask.png')
-cfg.model.mean_tex_path = os.path.join(cfg.deca_dir, 'model', 'mean_texture.jpg')
-cfg.model.tex_path = os.path.join(cfg.deca_dir, 'model', 'FLAME_albedo_from_BFM.npz')
 cfg.model.tex_type = 'BFM'  # BFM, FLAME, albedoMM
 cfg.model.uv_size = 256
 cfg.model.param_list = ['shape', 'tex', 'exp', 'pose', 'cam', 'light']

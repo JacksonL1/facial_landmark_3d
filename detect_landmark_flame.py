@@ -1,4 +1,5 @@
 import cv2
+import sys
 from utils.wj_utils import get_crop_box, crop_image, get_smooth_data, resize_para
 from res_flame.deca import DECA
 from res_flame.utils.config import cfg
@@ -7,15 +8,13 @@ from face_alignment.detection import FAN_landmark
 
 
 def get_landmark(path):
-    crop_type = "bbox"  # crop type bbox/landmark
-    write_file = "E:/video/demo/landmark3d_smooth.avi"
+    crop_type = "landmark"  # crop type bbox/landmark
 
     deca = DECA(config=cfg, device=cfg.device)
 
     cap = cv2.VideoCapture(path)
     ret, frame = cap.read()
     w, h, _ = frame.shape
-    # out = cv2.VideoWriter(write_file, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 24, (h, w))
 
     w_h_scale = resize_para(frame)
     face_detect = detector.SFDDetector(cfg.device, cfg.rect_model_path, w_h_scale)
@@ -42,7 +41,6 @@ def get_landmark(path):
             for x, y in landmark_3d[:, :2]:
                 cv2.circle(frame_list[cfg.list_size // 2], (int(x), int(y)), 1, (255, 255, 0))
             cv2.imshow("frame", frame_list[cfg.list_size // 2])
-            # out.write(frame_list[list_size // 2])
             cv2.waitKey(1)
         else:
             print("cannot find face......")
@@ -50,5 +48,5 @@ def get_landmark(path):
 
 
 if __name__ == "__main__":
-    video_path = "video/base_test.mp4"
+    video_path = str(sys.argv[1])
     get_landmark(video_path)

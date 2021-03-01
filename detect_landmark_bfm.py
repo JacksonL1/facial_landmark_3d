@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import torch
+import sys
 import torchvision.transforms as transforms
 from res_flame.models import mobilenet_v1
 import numpy as np
@@ -17,12 +18,13 @@ from face_alignment.detection import FAN_landmark
 import torch.backends.cudnn as cudnn
 
 
-def main():
+def get_landmark(path):
     device = torch.device("cuda")
-    cap = cv2.VideoCapture('video/base_test.mp4')
+    cap = cv2.VideoCapture(path)
 
     cudnn.benchmark = True
     smooth_flag = False
+
     ret, frame = cap.read()
     frame = resize_frame(frame, cfg.resize_size)
     height, width, _ = frame.shape
@@ -69,4 +71,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    video_path = str(sys.argv[1])
+    get_landmark(video_path)
