@@ -24,7 +24,7 @@ def _parse_param_62(param):
     return p, offset, alpha_shp, alpha_exp
 
 
-def _parse_param_240(param):
+def parse_param_240(param):
     """Work for both numpy and tensor"""
     p_ = param[:12].reshape(3, -1)
     p = p_[:, :3]
@@ -48,7 +48,7 @@ def reconstruct_vertex(param, shape, whitening=True, dense=False, transform=True
     if len(param) == 62:
         p, offset, alpha_shp, alpha_exp = _parse_param_62(param)
     else:
-        p, offset, alpha_shp, alpha_exp = _parse_param_240(param)
+        p, offset, alpha_shp, alpha_exp = parse_param_240(param)
 
     if dense:
         vertex = p @ (u + w_shp @ alpha_shp + w_exp @ alpha_exp).reshape(3, -1, order='F') + offset

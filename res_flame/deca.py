@@ -33,6 +33,7 @@ class DECA(object):
         self.image_size = self.cfg.dataset.image_size
         self.uv_size = self.cfg.model.uv_size
         self._create_model(self.cfg.model)
+        self.faces = self.flame.faces_tensor.detach().cpu().numpy()
 
     def _create_model(self, model_cfg):
         # set up parameters
@@ -89,4 +90,18 @@ class DECA(object):
         left, top, right, bottom = box
         landmark3d[:, 0] = left + landmark3d[:, 0] * ratio
         landmark3d[:, 1] = top + landmark3d[:, 1] * ratio
+
         return landmark3d
+
+    @torch.no_grad()
+    def get_dense(self, codedict, box, ratio):
+        verts, landmarks2d, landmarks3d = self.flame(shape_params=codedict['shape'], expression_params=codedict['exp'],
+                                                     pose_params=codedict['pose'])
+        left, top, right, bottom = box
+        trans_verts = util.batch_orth_proj(verts, codedict['cam'])
+        trans_verts[:, :, 1:] = -trans_verts[:, :, 1:]
+        trans_verts = trans_verts * self.image_size / 2 + self.image_size / 2
+        trans_vert = trans_verts[0].detach().cpu().numpy()
+        trans_vert[:, 0] = left + trans_vert[:, 0] * ratio
+        trans_vert[:, 1] = top + trans_vert[:, 1] * ratio
+        return trans_vert

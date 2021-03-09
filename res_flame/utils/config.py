@@ -17,6 +17,7 @@ cfg.pretrained_modelpath = os.path.join(cfg.deca_dir, 'model', 'deca_model.tar')
 cfg.rect_model_path = os.path.join(cfg.deca_dir, 'model', 's3fd.pth')
 cfg.landmark_model_path = os.path.join(cfg.deca_dir, 'model', '2DFAN4-11f355bf06.pth.tar')
 cfg.checkpoint_fp = os.path.join(cfg.deca_dir, 'model', 'vdc_mobilenet1.tar')
+cfg.face_seg_model = os.path.join(cfg.deca_dir, 'model', 'face_seg.pth')
 
 # ---------------------------------------------------------------------------- #
 # Options for Face model

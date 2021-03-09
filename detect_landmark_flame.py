@@ -1,5 +1,8 @@
 import cv2
 import sys
+import numpy as np
+from utils import mesh
+from skimage import img_as_ubyte
 from utils.wj_utils import get_crop_box, crop_image, get_smooth_data, resize_para
 from res_flame.deca import DECA
 from res_flame.utils.config import cfg
@@ -15,9 +18,8 @@ def get_landmark(path):
     cap = cv2.VideoCapture(path)
     ret, frame = cap.read()
     w, h, _ = frame.shape
-
-    w_h_scale = resize_para(frame)
-    face_detect = detector.SFDDetector(cfg.device, cfg.rect_model_path, w_h_scale)
+    face_detect = detector.SFDDetector(cfg.device, cfg.rect_model_path)
+    smooth_flag = False
     if crop_type == "landmark":
         face_landmark = FAN_landmark.FANLandmarks(cfg.device, cfg.landmark_model_path, cfg.detect_type)
 
@@ -37,10 +39,14 @@ def get_landmark(path):
 
             code_dict = deca.encode(images)
             landmark3d = deca.get_landmark3d(code_dict, box, ratio)
-            show_frame, landmark_3d = get_smooth_data(frame, landmark3d, frame_list, landmark_list, cfg.list_size)
+            if smooth_flag:
+                show_frame, landmark_3d = get_smooth_data(frame, landmark3d, frame_list, landmark_list, cfg.list_size)
+            else:
+                show_frame = frame
+                landmark_3d = landmark3d
             for x, y in landmark_3d[:, :2]:
-                cv2.circle(frame_list[cfg.list_size // 2], (int(x), int(y)), 1, (255, 255, 0))
-            cv2.imshow("frame", frame_list[cfg.list_size // 2])
+                cv2.circle(show_frame, (int(x), int(y)), 1, (255, 255, 0))
+            cv2.imshow("frame", show_frame)
             cv2.waitKey(1)
         else:
             print("cannot find face......")

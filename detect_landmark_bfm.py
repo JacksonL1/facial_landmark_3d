@@ -12,7 +12,7 @@ from utils.inference import (
     predict_68pts,
 )
 from res_flame.utils.config import cfg
-from utils.wj_utils import resize_para, roi_box_from_landmark, resize_frame, get_smooth_data
+from utils.wj_utils import roi_box_from_landmark, resize_frame, get_smooth_data
 from face_alignment.detection import sfd_detector as detector
 from face_alignment.detection import FAN_landmark
 import torch.backends.cudnn as cudnn
@@ -29,8 +29,7 @@ def get_landmark(path):
     frame = resize_frame(frame, cfg.resize_size)
     height, width, _ = frame.shape
 
-    w_h_scale = resize_para(frame)
-    face_detect = detector.SFDDetector(device, cfg.rect_model_path, w_h_scale)
+    face_detect = detector.SFDDetector(device, cfg.rect_model_path)
     face_landmark = FAN_landmark.FANLandmarks(device, cfg.landmark_model_path, cfg.detect_type)
     transform = transforms.Compose([ToTensorGjz(), NormalizeGjz(mean=127.5, std=128)])
 

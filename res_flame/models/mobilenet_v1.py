@@ -14,8 +14,8 @@ Modified By cleardusk
 import math
 import torch
 import torch.nn as nn
-
-__all__ = ['mobilenet_2', 'mobilenet_1', 'mobilenet_075', 'mobilenet_05', 'mobilenet_025']
+import cv2
+from utils.inference import crop_img
 
 
 class DepthWiseBlock(nn.Module):

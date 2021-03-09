@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import numpy as np
-from .ddfa import _parse_param_62, _parse_param_240
+from .ddfa import _parse_param_62, parse_param_240
 from .params import u_filter, w_filter, w_exp_filter, std_size, param_mean, param_std
 
 
@@ -12,7 +12,7 @@ def reconstruct_paf_anchor(param, whitening=True):
     if len(param) == 62:
         p, offset, alpha_shp, alpha_exp = _parse_param_62(param)
     else:
-        p, offset, alpha_shp, alpha_exp = _parse_param_240(param)
+        p, offset, alpha_shp, alpha_exp = parse_param_240(param)
     anchor = p @ (u_filter + w_filter @ alpha_shp + w_exp_filter @ alpha_exp).reshape(3, -1, order='F') + offset
     anchor[1, :] = std_size + 1 - anchor[1, :]
     return anchor[:2, :]
