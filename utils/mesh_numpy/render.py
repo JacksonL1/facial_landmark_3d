@@ -253,23 +253,23 @@ def render_texture(vertices, triangles, texture, tex_coords, tex_triangles, h, w
 
         for u in range(umin, umax+1):
             for v in range(vmin, vmax+1):
-                if not isPointInTri([u,v], vertices[tri, :2]): 
+                if not isPointInTri([u,v], vertices[tri, :2]):
                     continue
                 w0, w1, w2 = get_point_weight([u, v], vertices[tri, :2])
                 point_depth = w0*vertices[tri[0], 2] + w1*vertices[tri[1], 2] + w2*vertices[tri[2], 2]
                 if point_depth > depth_buffer[v, u]:
                     # update depth
-                    depth_buffer[v, u] = point_depth    
-                    
+                    depth_buffer[v, u] = point_depth
+
                     # tex coord
                     tex_xy = w0*tex_coords[tex_tri[0], :] + w1*tex_coords[tex_tri[1], :] + w2*tex_coords[tex_tri[2], :]
-                    tex_xy[0] = max(min(tex_xy[0], float(tex_w - 1)), 0.0); 
-                    tex_xy[1] = max(min(tex_xy[1], float(tex_h - 1)), 0.0); 
+                    tex_xy[0] = max(min(tex_xy[0], float(tex_w - 1)), 0.0)
+                    tex_xy[1] = max(min(tex_xy[1], float(tex_h - 1)), 0.0)
 
                     # nearest
                     if mapping_type == 'nearest':
                         tex_xy = np.round(tex_xy).astype(np.int32)
-                        tex_value = texture[tex_xy[1], tex_xy[0], :] 
+                        tex_value = texture[tex_xy[1], tex_xy[0], :]
 
                     # bilinear
                     elif mapping_type == 'bilinear':

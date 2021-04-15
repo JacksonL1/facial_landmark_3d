@@ -97,7 +97,12 @@ def get_smooth_data(frame, landmark, frame_list, landmark_list, list_size):
 
 
 def seg_crop_img(ori_image, rect, cropped_size):
+    # ori_image = (ori_image.detach().cpu().numpy().transpose(2, 3, 1, 0).squeeze()[:, :, ::-1] * 255).astype(np.uint8)
     l, t, r, b = rect
+    r = r - l
+    b = b - t
+    l = 0
+    t = 0
     center_x = r - (r - l) // 2
     center_y = b - (b - t) // 2
     w = (r - l) * 1.2
@@ -123,13 +128,13 @@ def seg_crop_img(ori_image, rect, cropped_size):
 
 def face_seg(img, net):
     h, w, _ = img.shape
+    eye_area = [2, 3, 4, 5, 6, 11, 12, 13]
     face_area = [1, 2, 3, 4, 5, 6, 10, 11, 12, 13]
+    # face_area = [1]
     to_tensor = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
-    w_ratio = w / 512
-    h_ratio = h / 512
     pil_image = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     resize_pil_image = pil_image.resize((512, 512), Image.BILINEAR)
     tensor_image = to_tensor(resize_pil_image)
@@ -139,13 +144,165 @@ def face_seg(img, net):
     parsing = out.squeeze(0).cpu().detach().numpy().argmax(0)
     vis_parsing_anno = parsing.copy().astype(np.uint8)
     vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1]))
+    eye_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1]))
     num_of_class = np.max(vis_parsing_anno)
 
     for pi in range(1, num_of_class + 1):
         if pi in face_area:
             index = np.where(vis_parsing_anno == pi)
             vis_parsing_anno_color[index[0], index[1]] = 1
+
+    for pi in range(1, num_of_class + 1):
+        if pi in eye_area:
+            index = np.where(vis_parsing_anno == pi)
+            eye_color[index[0], index[1]] = 1
     image_mask = vis_parsing_anno_color[..., None]
     image_mask[np.where(image_mask != 0)] = 1.
+    image_mask = cv2.resize(image_mask, (h, w))
 
-    return image_mask, [w_ratio, h_ratio]
+    eye_mask = eye_color[..., None]
+    eye_mask[np.where(eye_mask != 0)] = 1.
+    eye_mask = cv2.resize(eye_mask, (h, w))
+
+    image_mask = image_mask[..., None]
+    eye_mask = eye_mask[..., None]
+
+    image_mask = np.concatenate((image_mask, image_mask, image_mask), axis=-1)
+    eye_mask = np.concatenate((eye_mask, eye_mask, eye_mask), axis=-1)
+
+    image_mask = torch.from_numpy(image_mask[None, ...].transpose(0, 3, 1, 2)).cuda()
+    eye_mask = torch.from_numpy(eye_mask[None, ...].transpose(0, 3, 1, 2)).cuda()
+    return image_mask, eye_mask
+
+
+def color_transfer(ori, img):
+    ori = cv2.cvtColor(ori, cv2.COLOR_BGR2LAB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    ori_avg = np.mean(ori, axis=(0, 1))
+    img_avg = np.mean(img, axis=(0, 1))
+
+    ori_std = np.std(ori, axis=(0, 1))
+    img_std = np.std(img, axis=(0, 1))
+
+    img = (img - img_avg) / img_std * ori_std + ori_avg
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_LAB2BGR)
+    return img
+
+
+def tex_completion(ori_texture, face_mask, thresh=80, mean_scalar=150, k=5):
+    '''
+        补图片中没有信息的头部区域信息（逻辑待优化）
+        ori_texture： 通过预测，重建的头部区域信息
+        face_mask：人脸部位mask
+        thresh： 人脸轮廓边缘向内缩小的像素值
+        mean_scalar： 轮廓边缘如果RGB值小于mean_scalar会被内部像素覆盖
+        k： 取轮廓内部k个像素向外覆盖
+    '''
+    new_texture = ori_texture.copy()
+    h, w, _ = new_texture.shape
+    below_eyeball = 810
+    t, b = 10000, 0
+
+    from tqdm import tqdm
+    for i in tqdm(range(below_eyeball, h)):
+        if np.max(new_texture[i, :]) == 0:
+            continue
+        edge = np.nonzero(np.mean(new_texture[i, :], axis=1))[0]
+        if edge.shape[0] < k:
+            new_texture[i] = 0
+            if i < h // 2:
+                t = i
+            else:
+                b = i
+            break
+        left_edge = edge[edge < w // 2]
+        right_edge = edge[edge > w // 2]
+        if left_edge.shape[0] > 0:
+            l_num = np.min(left_edge) + thresh
+        else:
+            l_num = w // 2
+        if right_edge.shape[0] > 0:
+            r_num = np.max(right_edge) - thresh
+        else:
+            r_num = w // 2
+
+        for j in range(l_num, -1, -1):
+            area = []
+            idx = 1
+            while len(area) < k:
+                curr = new_texture[i][j + idx]
+                if np.mean(curr) < mean_scalar:
+                    area = []
+                else:
+                    area.append(curr)
+                idx += 1
+                if j + idx >= w:
+                    break
+            if len(area) < k:
+                new_texture[i] = 0
+                if i < h // 2:
+                    t = i
+                else:
+                    b = i
+                break
+            else:
+                j = j - k - 1 + idx
+                area = np.array(area)
+                new_texture[i][:j] = np.concatenate((np.tile(area, (j // k, 1)), area[:j % k]))
+                break
+
+        for j in range(r_num, w):
+            area = []
+            idx = 1
+            while len(area) < k:
+                curr = new_texture[i][j - idx]
+                if np.mean(curr) < mean_scalar:
+                    area = []
+                else:
+                    area.append(curr)
+                idx += 1
+                if j - idx <= 0:
+                    break
+            if len(area) < k:
+                new_texture[i] = 0
+                if i < h // 2:
+                    t = i
+                else:
+                    b = i
+                break
+            else:
+                area = np.array(area)
+                j = j - idx + k + 1
+                right_j = w - j
+                new_texture[i][j:] = np.concatenate((np.tile(area, (right_j // k, 1)), area[:right_j % k]))
+                break
+        t = min(i, t)
+        b = max(i, b)
+    t = t + 12
+    print(t, b)
+    out_face_mask = 1 - face_mask.copy()
+    out_face_mask[below_eyeball:, ...] = 0
+    top_idx = 0
+    btm_idx = 0
+
+    while True:
+        top_idx += 1
+        if t + top_idx >= h:
+            top_idx = h - t - 1
+            break
+
+        if np.mean(new_texture[t + top_idx]) >= mean_scalar:
+            new_texture[below_eyeball:t + top_idx, ...] = new_texture[t + top_idx + 1, ...]
+            break
+
+    out_face_mask = out_face_mask * new_texture[t + top_idx, ...]
+    while True:
+        btm_idx += 1
+        if b - btm_idx <= 0:
+            break
+        if np.mean(new_texture[b - btm_idx]) >= mean_scalar:
+            new_texture[b - btm_idx + 1:, ...] = new_texture[b - btm_idx, ...]
+            break
+    new_texture += out_face_mask
+    return new_texture

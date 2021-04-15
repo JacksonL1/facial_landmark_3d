@@ -124,7 +124,7 @@ def dump_vertex(vertex, wfp):
     print('Dump to {}'.format(wfp))
 
 
-def _predict_vertices(param, roi_bbox, shape, dense, transform=True):
+def _predict_vertices(param, roi_bbox, shape, dense):
     vertex = reconstruct_vertex(param, shape, dense=dense)
     sx, sy, ex, ey = roi_bbox
     scale_x = (ex - sx) / shape

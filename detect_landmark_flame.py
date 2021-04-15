@@ -1,9 +1,6 @@
 import cv2
 import sys
-import numpy as np
-from utils import mesh
-from skimage import img_as_ubyte
-from utils.wj_utils import get_crop_box, crop_image, get_smooth_data, resize_para
+from utils.wj_utils import get_crop_box, crop_image, get_smooth_data
 from res_flame.deca import DECA
 from res_flame.utils.config import cfg
 from face_alignment.detection import sfd_detector as detector

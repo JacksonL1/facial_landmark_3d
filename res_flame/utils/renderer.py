@@ -17,8 +17,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from skimage.io import imread
-import imageio
 from pytorch3d.structures import Meshes
 from pytorch3d.io import load_obj
 from pytorch3d.renderer.mesh import rasterize_meshes
@@ -86,7 +84,7 @@ class SRenderY(nn.Module):
         verts, faces, aux = load_obj(obj_filename)
         uvcoords = aux.verts_uvs[None, ...]      # (N, V, 2)
         uvfaces = faces.textures_idx[None, ...] # (N, F, 3)
-        faces = faces.verts_idx[None,...]
+        faces = faces.verts_idx[None, ...]
 
         if rasterizer_type == 'pytorch3d':
             self.rasterizer = Pytorch3dRasterizer(image_size)
@@ -151,12 +149,13 @@ class SRenderY(nn.Module):
         alpha_images = rendering[:, -1, :, :][:, None, :, :].detach()
 
         # albedo
-        uvcoords_images = rendering[:, :3, :, :]; grid = (uvcoords_images).permute(0, 2, 3, 1)[:, :, :, :2]
-        albedo_images = F.grid_sample(albedos, grid, align_corners=False)
+        uvcoords_images = rendering[:, :3, :, :]
+        grid = uvcoords_images.permute(0, 2, 3, 1)[:, :, :, :2]
 
         # visible mask for pixels with positive normal direction
         transformed_normal_map = rendering[:, 3:6, :, :].detach()
         pos_mask = (transformed_normal_map[:, 2:, :, :] < -0.05).float()
+        albedo_images = F.grid_sample(albedos, grid, align_corners=False)
 
         # shading
         normal_images = rendering[:, 9:12, :, :]
@@ -185,7 +184,7 @@ class SRenderY(nn.Module):
             'grid': grid,
             'normals': normals,
             'normal_images': normal_images*alpha_images,
-            'transformed_normals': transformed_normals,
+            'transformed_normals': transformed_normals
         }
         
         return outputs
